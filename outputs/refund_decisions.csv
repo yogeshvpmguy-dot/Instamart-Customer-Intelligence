@@ -1,0 +1,8 @@
+scenario_id,customer_id,expected_outcome,predicted_outcome,predicted_refund_inr,reason
+S1,C0007,REFUND,REFUND,128.25,Eligible under the late-delivery rule; 7-day request window still needs verification
+S2,C0008,REFUND,REFUND,135.00,Eligible under the late-delivery rule; 7-day request window still needs verification
+S3,C0016,ESCALATE,ESCALATE,1999.00,Human support lead approval required
+S4,C0001,DENIED,DENIED,0.00,Delivery was 45 minutes or less
+S5,C0003,DENIED,DENIED,0.00,Only completed orders are eligible for refunds
+S6,C0001,NOT_FOUND,NOT_FOUND,0.00,Order ID does not exist
+S7,C0007,FALLBACK,FALLBACK,0.00,Loop marker detected; human review required
