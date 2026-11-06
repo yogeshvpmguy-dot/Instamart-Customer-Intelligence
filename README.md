@@ -1,44 +1,138 @@
-
-
 # Instamart Customer Intelligence and Support Co-Pilot
 
-## 1. Project Overview
+## Overview
 
-This project builds a prototype customer intelligence and support system for an online grocery delivery platform inspired by the Instamart use case.
+This project develops an end-to-end customer intelligence and support co-pilot prototype inspired by the Instamart online grocery delivery use case.
 
-It combines customer data analysis, machine learning-based ticket classification, and a rule-based refund decision engine.
+The system combines data cleaning, SQL analytics, customer segmentation, lapse prediction, support ticket classification, policy-based RAG, and an automated refund agent.
 
-## 2. Project Objectives
+### Objectives
 
-- Clean and prepare customer, order, product, and support-ticket datasets.
-- Generate customer activity and purchasing features.
-- Analyze customer behavior using order history.
+- Clean customer, order, product, and ticket datasets.
+- Build a SQLite database and perform SQL analytics.
+- Identify customer behavior patterns and potential lapse risk.
 - Classify support tickets into delivery, billing, fraud, and technical categories.
-- Apply refund policy rules to sample support scenarios.
-- Identify cases that require human support review.
+- Retrieve relevant policy information using TF-IDF and cosine similarity.
+- Automate refund decisions while supporting escalation and fallback.
+- Maintain human oversight for uncertain or high-value decisions.
 
-## 3. Project Structure
+## Reproduce
 
-```text
-Instamart-Capstone/
-├── data/
-│   ├── raw/
-│   ├── clean/
-│   └── policies/
-├── outputs/
-├── src/
-└── README.md
-|```
+### Requirements
 
-## 4. Technologies Used
+- Python 3.11 or later
+- SQLite 3.25 or later
+- pandas
+- numpy
+- scikit-learn
+- joblib
 
-- Python
-- Pandas
-- Scikit-learn
+### Setup
 
-## 5. Customer Data Analysis
+Run these commands from the project root directory in PowerShell.
 
-Customer and order data are cleaned and transformed into useful features:
+1. Create a virtual environment:
+
+   `py -m venv .venv`
+
+2. Activate the virtual environment:
+
+   `.\.venv\Scripts\Activate.ps1`
+
+3. Install dependencies:
+
+   `python -m pip install -r requirements.txt`
+
+4. Generate the project data:
+
+   `python generate_data.py`
+
+5. Clean the datasets:
+
+   `python src/clean_data.py`
+
+6. Build the SQLite database:
+
+   `python src/build_database.py`
+
+7. Validate the cleaned data and database:
+
+   `python src/validate_data.py`
+
+8. Generate customer features:
+
+   `python src/customer_segmentation.py`
+
+9. Run customer lapse prediction:
+
+   `python src/lapse_prediction.py`
+
+10. Identify high-risk customers:
+
+    `python src/high_risk_customers.py`
+
+11. Train and evaluate the ticket classifier:
+
+    `python src/ticket_classifier.py`
+
+12. Test ticket predictions:
+
+    `python src/predict_ticket.py`
+
+13. Run the refund decision engine:
+
+    `python src/refund_engine.py`
+
+14. Evaluate the policy RAG assistant:
+
+    `python src/policy_rag.py`
+
+15. Run the refund agent:
+
+    `python src/refund_agent.py`
+
+Generated results are saved in the `outputs/` directory.
+
+**Important:** The LMS-provided `generate_data.py` and `mock_llm.py` files are required. Use the original provided versions without modifying them.
+
+## Part A: Data Foundation
+
+### Data Cleaning
+
+The project processes customer, order, product, and ticket datasets.
+
+Data preparation includes:
+
+- Handling missing and invalid values.
+- Normalizing inconsistent city and gender values.
+- Removing duplicate order records.
+- Correcting invalid order amounts using product price, quantity, and discount.
+- Validating order and customer records.
+
+### SQLite Database
+
+The cleaned datasets are stored in a SQLite database.
+
+The database supports structured queries and customer/order analytics.
+
+### SQL Analytics
+
+SQL queries analyze customer activity, order behavior, revenue, and purchasing patterns.
+
+A cumulative daily revenue query uses SQL window functions to calculate revenue over time.
+
+### Outputs
+
+- `data/clean/`
+- `data/instamart.db`
+- `outputs/customer_activity_summary.csv`
+- `outputs/customer_order_summary.csv`
+
+## Part B: Customer Segments and Lapse Prediction
+
+### Customer Feature Engineering
+
+Customer features include:
 
 - Total orders
 - Completed orders
@@ -48,30 +142,58 @@ Customer and order data are cleaned and transformed into useful features:
 - Cancellation rate
 - Recency of customer activity
 
-**Note:** The dataset does not contain a verified churn label. These features support customer behavior analysis, but they are not a validated churn prediction model.
+### Customer Segmentation
 
-## 6. Support Ticket Classification
+K-Means clustering is applied to customer activity features using feature scaling.
 
-The project uses a machine learning pipeline to classify support tickets into four categories:
+The project identifies four customer behavior groups:
+
+- High-spending customers
+- Low-spending customers
+- Frequent customers
+- Inactive customers
+
+Cluster IDs are algorithm-generated and should be interpreted using their customer metrics.
+
+### Lapse Prediction
+
+A Logistic Regression model predicts potential customer lapse using historical activity features.
+
+The model uses earlier customer activity to predict whether a customer completed an order in a later period.
+
+The September completed-order label is used as a lapse proxy.
+
+**Limitation:** This is a proxy label, not a verified long-term churn label.
+
+### Outputs
+
+- `outputs/customer_features.csv`
+- `outputs/customer_segments.csv`
+- `outputs/lapse_predictions.csv`
+- `outputs/high_risk_customers.csv`
+
+## Part C: Support Ticket Triage
+
+### Ticket Classification
+
+The project uses TF-IDF text features and Logistic Regression to classify support tickets into:
 
 - Delivery
 - Billing
 - Fraud
 - Technical
 
-TF-IDF converts ticket text into numerical features, and Logistic Regression predicts the ticket category.
+The classifier uses 160 usable labeled tickets.
 
-The dataset contains 160 usable labeled tickets. The initial test split achieved 100% accuracy, but this result applies only to that small test set and does not guarantee real-world performance.
+The initial test split achieved 100% accuracy. This result applies only to the small evaluation set and should not be interpreted as guaranteed real-world performance.
 
-Run the prediction script with:
+### Ticket Prediction
 
-    py .\src\predict_ticket.py
+The prediction script demonstrates classification of new support ticket messages.
 
+### Refund Decision Engine
 
-
-## 7. Refund Decision Engine
-
-The refund engine applies rule-based logic to sample customer support scenarios using the available order information and policy rules.
+A rule-based refund engine evaluates sample customer support scenarios using order details and refund policy rules.
 
 Possible decisions include:
 
@@ -81,56 +203,73 @@ Possible decisions include:
 - NOT_FOUND
 - FALLBACK
 
-The engine evaluates seven sample scenarios and records its decisions in:
+Seven sample scenarios were tested, with all seven expected outcomes matching the engine's output.
 
-    outputs/refund_decisions.csv
+### Outputs
 
-**Limitation:** Some scenario dates are unavailable, so the refund eligibility time window cannot always be verified. Human review is important for uncertain or high-value cases.
+- `outputs/ticket_predictions.csv`
+- `outputs/refund_decisions.csv`
 
-## 8. How to Run
+## Part D: Policy RAG Assistant and Refund Agent
 
-Open PowerShell in the project folder.
+### Policy RAG Assistant
 
-Install the required machine learning library:
+The RAG system retrieves relevant information from policy documents stored in `data/policies/`.
 
-    py -m pip install scikit-learn
+The retrieval pipeline includes:
 
-Run the ticket classifier:
+- Loading policy documents.
+- Splitting policy text into chunks with overlap.
+- TF-IDF vectorization.
+- Cosine similarity ranking.
+- Retrieving the top relevant policy chunks.
+- Generating an answer using the provided offline mock LLM.
 
-    py .\src\ticket_classifier.py
+The policy evaluation tested 14 questions against expected answers.
 
-Run the ticket prediction script:
+The evaluation reported 14/14 expected-answer matches. This is a simple evaluation metric and does not establish production-level RAG accuracy.
 
-    py .\src\predict_ticket.py
+### Refund Agent
 
-Run the refund decision engine:
+The refund agent combines SQLite order lookup, policy retrieval, refund calculation, and simulated refund actions.
 
-    py .\src\refund_engine.py
+The agent supports:
 
-Generated results are saved in the outputs/ folder.
+- Order lookup
+- Customer/order ownership validation
+- Policy search
+- Refund calculation
+- Refund issuance simulation
+- Human escalation
+- Fallback handling for unexpected loops
 
-## 9. Limitations and Future Improvements
+The agent was tested against seven scenarios and matched all seven expected outcomes.
 
-### Current Limitations
+The agent execution ledger is saved as:
 
-- The dataset is limited in size and may not represent real-world customer behavior.
-- No verified churn label is available for training a churn prediction model.
-- Ticket classification performance needs validation on more unseen data.
-- Refund decisions depend on the available order details and policy rules.
-- Uncertain cases should be reviewed by a human support agent.
+`outputs/refund_agent_ledger.jsonl`
 
-### Future Improvements
+**Important:** Refund issuance and escalation are simulated. The agent does not make real payments or contact a human support team.
 
-- Add verified customer churn labels and build a validated churn prediction model.
-- Test the ticket classifier on a larger, more diverse dataset.
-- Integrate a retrieval-augmented generation (RAG) system for policy-based support.
-- Add stronger fraud detection and human approval workflows.
-- Build a dashboard for customer insights and support decisions.
+## Limitations and Next Steps
 
-## 10. Responsible Use
+### Limitations
 
-This project is a learning prototype. Its predictions and refund decisions should not be used as the sole basis for real customer or financial decisions. Protect personal data and require human review for uncertain or high-impact cases.
+- The dataset is synthetic and limited in size.
+- The lapse prediction target is a proxy, not verified long-term churn.
+- Ticket classification needs evaluation on larger and more diverse datasets.
+- The RAG evaluation uses a simple expected-answer matching metric.
+- Refund request dates are not available for every scenario, so the seven-day eligibility window cannot always be verified.
+- The refund agent uses an offline mock LLM and simulated actions.
+- High-value refunds and uncertain decisions require human review.
+- The system is a learning prototype, not a production customer-support platform.
 
-## 11. Project Status
+### Next Steps
 
-Core data preparation, customer feature generation, ticket classification, and rule-based refund decision components have been developed. Further testing and integration are needed before real-world use.
+- Improve ticket classification using more labeled data.
+- Add stronger PII redaction and ticket guardrails.
+- Validate customer lapse predictions using verified churn labels.
+- Improve RAG retrieval and evaluation.
+- Add more refund edge cases and policy checks.
+- Integrate real human review workflows in a controlled environment.
+- Improve monitoring, testing, and error handling.
