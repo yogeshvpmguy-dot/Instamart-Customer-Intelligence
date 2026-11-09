@@ -1,40 +1,78 @@
 import pandas as pd
-from sklearn.preprocessing import StandardScaler
-from sklearn.cluster import KMeans
+import numpy as np
 
-# Load existing customer features
 df = pd.read_csv("outputs/customer_features.csv")
 
-# Select RFM features
-rfm = df[
+# RFM features
+X = df[
     ["recency_days", "completed_orders", "total_spend"]
-].copy()
+].to_numpy(dtype=float)
 
-rfm.columns = ["Recency", "Frequency", "Monetary"]
+# Standardize
+mean = X.mean(axis=0)
+std = X.std(axis=0)
+std[std == 0] = 1
+X = (X - mean) / std
 
-# Handle customers with missing recency
-rfm["Recency"] = rfm["Recency"].fillna(rfm["Recency"].max() + 1)
+# NumPy KMeans with multiple initializations
+k = 4
+best_labels = None
+best_inertia = float("inf")
 
-# Scale features
-scaler = StandardScaler()
-rfm_scaled = scaler.fit_transform(rfm)
+for seed in range(10):
+    rng = np.random.default_rng(seed)
 
-# Create customer segments
-model = KMeans(
-    n_clusters=4,
-    random_state=42,
-    n_init=10
-)
+    centroids = X[
+        rng.choice(len(X), k, replace=False)
+    ].copy()
 
-df["segment"] = model.fit_predict(rfm_scaled)
+    for iteration in range(300):
+        distances = np.sum(
+            (X[:, None, :] - centroids[None, :, :]) ** 2,
+            axis=2
+        )
 
-# Save segmentation results
-df.to_csv(
-    "outputs/customer_segments.csv",
-    index=False
-)
+        labels = distances.argmin(axis=1)
 
-# Display segment summary
+        new_centroids = centroids.copy()
+
+        for i in range(k):
+            points = X[labels == i]
+
+            if len(points) > 0:
+                new_centroids[i] = points.mean(axis=0)
+            else:
+                # Reinitialize empty cluster
+                farthest = distances.min(axis=1).argmax()
+                new_centroids[i] = X[farthest]
+
+        if np.allclose(centroids, new_centroids):
+            centroids = new_centroids
+            break
+
+        centroids = new_centroids
+
+    # Recalculate labels using final centroids
+    distances = np.sum(
+        (X[:, None, :] - centroids[None, :, :]) ** 2,
+        axis=2
+    )
+    labels = distances.argmin(axis=1)
+
+    inertia = np.sum(
+        (X - centroids[labels]) ** 2
+    )
+
+    if inertia < best_inertia:
+        best_inertia = inertia
+        best_labels = labels.copy()
+
+df["segment"] = best_labels
+
+df.to_csv("outputs/customer_segments.csv", index=False)
+
+print("\nCustomer Segment Summary:")
+
 summary = df.groupby("segment").agg(
     customers=("customer_id", "count"),
     avg_recency=("recency_days", "mean"),
@@ -42,23 +80,5 @@ summary = df.groupby("segment").agg(
     avg_spend=("total_spend", "mean")
 )
 
-print("\nCustomer Segment Summary:")
 print(summary.round(2))
-
-# Assign meaningful customer segment names
-segment_names = {
-    0: "High-Spending Customers",
-    1: "Low-Spending Customers",
-    2: "Frequent Customers",
-    3: "Inactive Customers"
-}
-
-df["segment_name"] = df["segment"].map(segment_names)
-
-# Save updated segmentation results
-df.to_csv("outputs/customer_segments.csv", index=False)
-
-print("\nCustomer Segment Names:")
-print(df[["customer_id", "segment", "segment_name"]].head(10))
-
 print("\nSaved: outputs/customer_segments.csv")

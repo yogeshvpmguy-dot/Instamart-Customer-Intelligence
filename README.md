@@ -1,4 +1,4 @@
-# Instamart Customer Intelligence and Support Co-Pilot
+﻿# Instamart Customer Intelligence and Support Co-Pilot
 
 ## Overview
 
@@ -185,11 +185,40 @@ The project uses TF-IDF text features and Logistic Regression to classify suppor
 
 The classifier uses 160 usable labeled tickets.
 
-The initial test split achieved 100% accuracy. This result applies only to the small evaluation set and should not be interpreted as guaranteed real-world performance.
+### PII Redaction
 
-### Ticket Prediction
+The `src/pii_redaction.py` module applies regex-based redaction to:
+
+- Email addresses -> `[EMAIL]`
+- Indian phone numbers -> `[PHONE]`
+- Instamart order IDs -> `[ORDER_ID]`
+
+PII redaction is applied before ticket model training and prediction.
+
+This is a basic regex-based implementation and may not detect every possible PII format.
+
+### Ticket Prediction and Confidence Guardrail
 
 The prediction script demonstrates classification of new support ticket messages.
+
+The evaluation classifier records:
+
+- Predicted category
+- Confidence score
+- Human-review flag
+- Prediction correctness
+
+An experimental confidence threshold of 0.60 is used. Predictions below this threshold are flagged for human review.
+
+In the current 40-ticket test split, all predictions exceeded the threshold, so no tickets were flagged for review.
+
+A high confidence score does not guarantee a correct prediction.
+
+### Evaluation
+
+The initial test split achieved 100% accuracy on 40 test tickets.
+
+This result applies only to the small synthetic evaluation set and should not be interpreted as guaranteed real-world performance.
 
 ### Refund Decision Engine
 
@@ -209,6 +238,20 @@ Seven sample scenarios were tested, with all seven expected outcomes matching th
 
 - `outputs/ticket_predictions.csv`
 - `outputs/refund_decisions.csv`
+
+### Refund Safety Checks
+
+The refund agent includes additional safety validations:
+
+- PII redaction is applied to customer messages before sending them to the mock LLM.
+- Order lookup verifies customer ownership.
+- Refund calculation uses verified SQLite order values instead of trusting LLM-provided values.
+- Only completed orders are eligible for refunds.
+- Refunds above INR 1000 are escalated for human lead approval.
+- Refund issuance is blocked if the requested amount differs from the verified calculation.
+- Refunds within the 45-minute delivery threshold are denied.
+
+These checks are implemented as prototype safeguards and have not been independently security-audited.
 
 ## Part D: Policy RAG Assistant and Refund Agent
 
